@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PAIP - Sistem Rekod Kualiti Air</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;background:#f5f5f5;color:#1a1a1a}
+
+/* ── AUTH PAGE ── */
+.auth-page{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0B4DA2 0%, #2B78E4 100%)}
+.auth-card{background:#fff;border-radius:16px;padding:36px 32px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.15)}
+.auth-logo{text-align:center;margin-bottom:24px}
+.auth-logo .brand{font-size:28px;font-weight:700;color:#0B4DA2}
+.auth-logo p{font-size:12px;color:#888;margin-top:4px}
+.auth-tabs{display:flex;border-bottom:1px solid #e8e8e8;margin-bottom:24px}
+.auth-tab{flex:1;padding:10px;text-align:center;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;color:#888;background:none;border-top:none;border-left:none;border-right:none}
+.auth-tab.active{color:#0B4DA2;border-bottom:2px solid #0B4DA2;font-weight:500}
+.auth-form{display:flex;flex-direction:column;gap:12px}
+.auth-form input{padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:13px;width:100%}
+.auth-form input:focus{outline:none;border-color:#2B78E4;box-shadow:0 0 0 3px rgba(29,158,117,0.1)}
+.auth-btn{padding:11px;background:#0B4DA2;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;width:100%;margin-top:4px}
+.auth-btn:hover{background:#083D80}
+.auth-btn:disabled{background:#ccc;cursor:not-allowed}
+.auth-error{background:#FCEBEB;color:#A32D2D;padding:10px 12px;border-radius:8px;font-size:12px;display:none}
+.auth-success{background:#E1F5EE;color:#0B4DA2;padding:10px 12px;border-radius:8px;font-size:12px;display:none}
+
+/* ── MAIN APP ── */
+.app-page{display:none}
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:220px;background:#0B4DA2;color:#fff;display:flex;flex-direction:column;z-index:100}
+.sidebar-logo{padding:20px 16px 12px;border-bottom:1px solid rgba(255,255,255,0.1)}
+.sidebar-logo .brand{font-size:18px;font-weight:700}
+.sidebar-logo .user-email{font-size:10px;opacity:0.7;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sidebar-nav{flex:1;padding:12px 8px;display:flex;flex-direction:column;gap:2px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:12px;color:rgba(255,255,255,0.8);border:none;background:none;width:100%;text-align:left;transition:background 0.15s}
+.nav-item:hover{background:rgba(255,255,255,0.1)}
+.nav-item.active{background:rgba(255,255,255,0.2);color:#fff;font-weight:500}
+.sidebar-footer{padding:12px 8px}
+.logout-btn{display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:12px;color:rgba(255,255,255,0.7);border:1px solid rgba(255,255,255,0.2);background:none;width:100%;text-align:left;transition:all 0.15s}
+.logout-btn:hover{background:rgba(255,100,100,0.2);color:#fff;border-color:rgba(255,100,100,0.4)}
+.main{margin-left:220px;min-height:100vh;padding:24px}
+.page-header{margin-bottom:20px}
+.page-header h1{font-size:20px;font-weight:600}
+.page-header p{font-size:13px;color:#666;margin-top:2px}
+.card{background:#fff;border-radius:12px;border:1px solid #e8e8e8;padding:20px;margin-bottom:16px}
+.stats-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px}
+.stat-card{background:#fff;border-radius:10px;border:1px solid #e8e8e8;padding:16px}
+.stat-label{font-size:11px;color:#888;margin-bottom:4px}
+.stat-value{font-size:24px;font-weight:600}
+.c-green{color:#2B78E4}.c-amber{color:#BA7517}.c-red{color:#E24B4A}.c-blue{color:#378ADD}.c-purple{color:#7F77DD}
+.info-box{background:#EEF4FD;border:1px solid #B5D4F4;border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:12px;color:#185FA5;display:flex;gap:8px}
+.success-box{background:#E1F5EE;border:1px solid #2B78E4;border-radius:8px;padding:12px 14px;margin-top:14px;font-size:12px;color:#0F6E56;display:none}
+.upload-zone{border:2px dashed #ccc;border-radius:10px;padding:40px;text-align:center;margin-bottom:16px;cursor:pointer;transition:all 0.15s}
+.upload-zone:hover,.upload-zone.dragover{border-color:#1D9E75;background:#f0faf6}
+.btn{padding:9px 18px;border-radius:8px;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-weight:500;border:none;transition:all 0.15s}
+.btn-primary{background:#2B78E4;color:#fff}.btn-primary:hover{background:#0F6E56}
+.btn-outline{background:#fff;border:1px solid #ddd;color:#333}.btn-outline:hover{background:#f5f5f5}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn-full{width:100%;justify-content:center;margin-bottom:10px}
+.form-group{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.form-group label{font-size:12px;font-weight:500;color:#555}
+.form-group select,.form-group input{font-size:13px;padding:8px 10px;border:1px solid #ddd;border-radius:8px;background:#fff;color:#1a1a1a}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.req{color:#E24B4A}
+.filter-row{display:flex;gap:10px;margin-bottom:16px;align-items:flex-end;flex-wrap:wrap}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fg label{font-size:11px;font-weight:500;color:#666}
+.fg input,.fg select{font-size:12px;padding:7px 9px;border:1px solid #ddd;border-radius:7px;height:34px;background:#fff}
+.tbl-wrap{overflow-x:auto;border:1px solid #e8e8e8;border-radius:10px}
+table{border-collapse:collapse;font-size:10px;width:max-content}
+th,td{border:0.5px solid #d0d0d0;padding:4px 6px;text-align:center;white-space:nowrap;line-height:1.3}
+th{font-weight:500;font-size:10px}
+/* Header group colors */
+
+/* Maklumat asas */
+.th-meta{
+    background:#F5F5F5;
+    color:#424242;
+}
+
+/* Tajuk utama */
+.th-main{
+    background:#0B4DA2;
+    color:#ffffff;
+}
+
+/* Sub-group header */
+.th-sub{
+    background:#E1F5EE;
+    color:#0B4DA2;
+    font-weight:700;
+}
+
+/* Air mentah */
+.th-mentah{
+    background:#DFF3EA;
+    color:#0A5240;
+}
+
+/* Tangki flok */
+.th-flok{
+    background:#C8E6C9;
+    color:#1B5E20;
+}
+
+/* Tangki mendap */
+.th-mendap{
+    background:#B2DFDB;
+    color:#004D40;
+}
+
+/* Selepas tapis */
+.th-tapis{
+    background:#B3E5FC;
+    color:#01579B;
+}
+
+/* Air bersih */
+.th-bersih{
+    background:#BBDEFB;
+    color:#0D47A1;
+}
+
+/* Kapur / Soda Ash */
+.th-kapur{
+    background:#FFE0B2;
+    color:#E65100;
+}
+
+/* Klorin */
+.th-klorin{
+    background:#F0F4C3;
+    color:#558B2F;
+}
+
+/* Koagulan */
+.th-koagulan{
+    background:#A5D6A7;
+    color:#1B5E20;
+}
+
+/* Polymer */
+.th-polymer{
+    background:#D1C4E9;
+    color:#4527A0;
+}
+
+/* Fluoride */
+.th-fluoride{
+    background:#F3E5F5;
+    color:#6A1B9A;
+}
+
+/* Paras air */
+.th-paras{
+    background:#F8BBD0;
+    color:#880E4F;
+}
+
+/* Status */
+.th-status{
+    background:#ECEFF1;
+    color:#37474F;
+}
+
+/* Accuracy */
+.th-acc{
+    background:#EEEEEE;
+    color:#424242;
+}
+td.left{text-align:left;padding-left:8px}
+.edit-input{width:100%;min-width:38px;border:1px solid #2B78E4;border-radius:3px;padding:1px 3px;font-size:10px;background:#f0faf6;text-align:center}
+.acc-input{width:46px;border:1px solid #ddd;border-radius:4px;padding:2px 4px;font-size:10px;text-align:center}
+.acc-bar{height:5px;border-radius:3px;background:#e0e0e0;overflow:hidden;margin-top:2px}
+.acc-fill{height:100%;border-radius:3px}
+.acc-high{background:#2B78E4}.acc-med{background:#BA7517}.acc-low{background:#E24B4A}
+.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:500}
+.badge-normal{background:#E1F5EE;color:#0F6E56}
+.badge-amaran{background:#fff3cd;color:#856404}
+.badge-kritikal{background:#FCEBEB;color:#A32D2D}
+.warn-label{font-size:9px;background:#FCEBEB;color:#A32D2D;padding:1px 5px;border-radius:4px}
+.warn-row td{background:#fffbf0 !important}
+.paging{display:flex;align-items:center;justify-content:space-between;margin-top:12px;font-size:12px;color:#666}
+.pg-btns{display:flex;gap:4px}
+.pg-btn{padding:4px 10px;border:1px solid #ddd;border-radius:6px;background:#fff;cursor:pointer;font-size:12px}
+.pg-btn.active{background:#2B78E4;color:#fff;border-color:#2B78E4}
+.semakan-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #f0f0f0}
+.semakan-row:last-child{border-bottom:none}
+.stabs{display:flex;gap:8px;margin-bottom:16px}
+.stab{padding:7px 16px;border-radius:8px;font-size:12px;cursor:pointer;border:1px solid #ddd;background:#fff;color:#666}
+.stab.active{background:#2B78E4;color:#fff;border-color:#2B78E4}
+.top-act{display:flex;gap:8px;justify-content:flex-end;margin-bottom:16px}
+.loading{text-align:center;padding:40px;color:#888}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid #e0e0e0;border-top-color:#2B78E4;border-radius:50%;animation:spin 0.8s linear infinite;margin-right:6px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:10px;color:#fff;font-size:13px;font-weight:500;z-index:9999;animation:slideIn 0.3s ease;max-width:360px}
+.toast-success{background:#2B78E4}.toast-error{background:#E24B4A}.toast-warning{background:#BA7517}
+@keyframes slideIn{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+.uploaded-preview{background:#f8f8f8;border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;margin-bottom:14px;border:1px solid #e8e8e8}
+.section-div{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:#888;margin:14px 0 8px;padding-bottom:6px;border-bottom:1px solid #f0f0f0}
+.masa-tag{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:500;background:#E1F5EE;color:#0B4DA2;margin:2px}
+</style>
+</head>
+<body>
+
+<!-- ── AUTH PAGE ─────────────────────────────────────────── -->
+<div class="auth-page" id="auth-page">
+  <div class="auth-card">
+
+    <div class="auth-logo">
+
+      <img src="/static/logo_paip.png"
+      style="
+      width:90px;
+      margin-bottom:12px;
+      ">
+
+      <div class="brand">
+      PAIP
+      </div>
+
+      <p>
+      Sistem Digitalisasi Rekod Kualiti Air
+      </p>
+
+    </div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active"
+      onclick="switchAuthTab('login',this)">
+      Log Masuk
+      </button>
+
+      <button class="auth-tab"
+      onclick="switchAuthTab('signup',this)">
+      Daftar Akaun
+      </button>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="login-form">
+      <div class="auth-form">
+
+        <input type="email"
+        id="login-email"
+        placeholder="Emel">
+
+        <input type="password"
+        id="login-password"
+        placeholder="Kata Laluan">
+
+        <div class="auth-error"
+        id="login-error">
+        </div>
+
+        <button class="auth-btn"
+        id="login-btn"
+        onclick="handleLogin()">
+
+        Log Masuk
+
+        </button>
+
+      </div>
+    </div>
+
+    <!-- SIGNUP -->
+    <div id="signup-form" style="display:none">
+
+      <div class="auth-form">
+
+        <input type="text"
+        id="signup-name"
+        placeholder="Nama Penuh">
+
+        <input type="email"
+        id="signup-email"
+        placeholder="Emel">
+
+        <input type="password"
+        id="signup-password"
+        placeholder="Kata Laluan">
+
+        <input type="password"
+        id="signup-confirm"
+        placeholder="Sahkan Kata Laluan">
+
+        <div class="auth-error"
+        id="signup-error">
+        </div>
+
+        <div class="auth-success"
+        id="signup-success">
+        </div>
+
+        <button class="auth-btn"
+        id="signup-btn"
+        onclick="handleSignup()">
+
+        Daftar Akaun
+
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- ── MAIN APP ───────────────────────────────────────────── -->
+<div class="app-page" id="app-page">
+  <div class="sidebar">
+    <div class="sidebar-logo">
+
+      <div style="
+      display:flex;
+      align-items:center;
+      gap:10px;
+      ">
+      
+      <img src="/static/logo_paip.png"
+      style="
+      width:42px;
+      height:42px;
+      background:white;
+      padding:4px;
+      border-radius:50%;
+      ">
+      
+      <div>
+        <div class="brand">PAIP</div>
+        <div class="user-email" id="user-email-display">-</div>
+      
+      </div>
+      
+      </div>
+      </div>
+    <nav class="sidebar-nav">
+      <button class="nav-item active" onclick="showPage('dashboard',this)">📊 Papan Pemuka</button>
+      <button class="nav-item" onclick="showPage('ekstrak',this)">📤 Pengekstrakan</button>
+      <button class="nav-item" onclick="showPage('data',this)">📋 Lihat Data</button>
+      <button class="nav-item" onclick="showPage('semakan',this)">✅ Semakan</button>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="logout-btn" onclick="handleLogout()">🚪 Log Keluar</button>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <!-- DASHBOARD -->
+  <div id="page-dashboard">
+    <div class="page-header"><h1>Papan Pemuka</h1><p>Ringkasan data kualiti air harian</p></div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-label">Jumlah Rekod</div><div class="stat-value c-blue" id="s-total">-</div></div>
+      <div class="stat-card"><div class="stat-label">Normal</div><div class="stat-value c-green" id="s-normal">-</div></div>
+      <div class="stat-card"><div class="stat-label">Amaran</div><div class="stat-value c-amber" id="s-amaran">-</div></div>
+      <div class="stat-card"><div class="stat-label">Kritikal</div><div class="stat-value c-red" id="s-kritikal">-</div></div>
+      <div class="stat-card"><div class="stat-label">Perlu Semak (&lt;80%)</div><div class="stat-value c-purple" id="s-low">-</div></div>
+    </div>
+    <div class="card"><p style="text-align:center;color:#666;padding:20px">Upload logbook images dalam tab <strong>Pengekstrakan</strong> untuk mula proses data.</p></div>
+  </div>
+
+  <!-- PENGEKSTRAKAN -->
+  <div id="page-ekstrak" style="display:none">
+    <div class="page-header"><h1>Pengekstrakan</h1><p>Muat naik imej logbook — Shift dan Masa akan dikesan secara automatik</p></div>
+    <div class="card">
+      <div class="info-box">ℹ️
+        <div><strong>Auto-detect Masa & Shift:</strong> System akan OCR column masa dalam logbook dan auto-assign shift yang betul untuk setiap row. Anda hanya perlu isi Loji dan Tarikh sahaja.</div>
+      </div>
+
+      <div class="section-div">Langkah 1 — Maklumat Asas</div>
+      <div class="form-row" style="margin-bottom:16px">
+        <div class="form-group">
+          <label>Loji <span class="req">*</span></label>
+          <select id="loji-select">
+            <option value="">Pilih Loji</option>
+            <optgroup label="Kuantan"><option>LOJI AIR PANCHING</option><option>LOJI AIR BUKIT UBI</option><option>LOJI AIR SEMAMBU</option><option>LOJI AIR BUKIT SAGU</option><option>LOJI AIR SG LEMBING</option><option>LOJI AIR LEPAR HILIR</option></optgroup>
+            <optgroup label="Maran"><option>LOJI AIR CHENOR</option><option>LOJI AIR PEKAN TAJAU</option><option>LOJI AIR JENGKA UTAMA</option><option>LOJI AIR JENGKA 3/7</option><option>LOJI AIR KERTAU</option><option>LOJI AIR ULU JEMPOL</option><option>LOJI AIR SIMPANG JENGKA</option><option>LOJI AIR BATU SAWAR</option></optgroup>
+            <optgroup label="Rompin"><option>LOJI AIR SELENDANG</option><option>LOJI AIR SEPAYANG</option><option>LOJI AIR SG AUR</option><option>LOJI AIR MUADZAN SHAH</option><option>LOJI AIR SG KERATONG</option></optgroup>
+            <optgroup label="Pekan"><option>LOJI AIR SEKOR</option><option>LOJI AIR LEPAR</option><option>LOJI AIR NENASI</option><option>LOJI AIR BELIMBING</option><option>LOJI AIR CHINI</option><option>LOJI AIR RUNCHANG</option><option>LOJI AIR RUNCHANG AGRO</option><option>LOJI AIR GANCHONG</option></optgroup>
+            <optgroup label="Temerloh"><option>LOJI AIR LUBUK KAWAH</option><option>LOJI AIR MEMPATEH</option><option>LOJI AIR JENDERAK UTARA</option><option>LOJI AIR JENDERAK KG</option><option>LOJI AIR SBRG TEMERLOH</option></optgroup>
+            <optgroup label="Bera"><option>LOJI AIR TRIANG</option><option>LOJI AIR BERA KOMPLEKS</option><option>LOJI AIR SG BERA TEMBANGAU</option><option>LOJI AIR SG BERA KEPAYANG</option></optgroup>
+            <optgroup label="Jerantut"><option>LOJI AIR BATU BALAI</option><option>LOJI AIR BATU EMBUN</option><option>LOJI AIR PADANG PIOL</option><option>LOJI AIR JENGKA 8</option><option>LOJI AIR SG TEKAM UTARA</option><option>LOJI AIR KG BANTAL</option><option>LOJI AIR KOTA GELANGGI</option><option>LOJI AIR LEPAR UTARA</option><option>LOJI AIR KUALA TAHAN</option><option>LOJI AIR SEBERANG TEMBELING</option></optgroup>
+            <optgroup label="Bentong"><option>LOJI AIR FASA 2</option><option>LOJI AIR KARAK</option><option>LOJI AIR KARAK INDAH</option><option>LOJI AIR LURAH BILUT</option><option>LOJI AIR JANDA BAIK</option><option>LOJI AIR SG GAPOI</option><option>LOJI AIR JAWI-JAWI</option><option>LOJI AIR MEMPAGA</option></optgroup>
+            <optgroup label="Cameron Highlands"><option>LOJI AIR TERLA</option><option>LOJI AIR HABU</option><option>LOJI AIR BRINCANG</option></optgroup>
+            <optgroup label="Lipis"><option>LOJI AIR SG JELAI</option><option>LOJI AIR BENTA</option><option>LOJI AIR BUKIT BETONG</option><option>LOJI AIR BATU 9</option><option>LOJI AIR MERAPOH</option><option>LOJI AIR SG TEMAU</option><option>LOJI AIR KECHAU</option><option>LOJI AIR KUALA MEDANG</option><option>LOJI AIR MELA</option></optgroup>
+            <optgroup label="Raub"><option>LOJI AIR BKT FRASER</option><option>LOJI AIR TRAS</option><option>LOJI AIR SG BILUT</option><option>LOJI AIR SG KLAU</option><option>LOJI AIR SG KLOI</option><option>LOJI AIR SG SEMANTAN</option><option>LOJI AIR BATU MALIM</option><option>LOJI AIR ULU SUNGAI</option></optgroup>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Tarikh <span class="req">*</span></label>
+          <input type="date" id="tarikh-input">
+        </div>
+      </div>
+
+      <div class="section-div">Langkah 2 — Muat Naik Imej Logbook (Satu Muka Surat Penuh)</div>
+      <div id="up-zone">
+        <div class="upload-zone" id="drop-zone"
+          onclick="document.getElementById('fi').click()"
+          ondragover="event.preventDefault();this.classList.add('dragover')"
+          ondragleave="this.classList.remove('dragover')"
+          ondrop="handleDrop(event)">
+          <div style="font-size:32px;margin-bottom:8px">📁</div>
+          <p style="font-weight:500;font-size:14px">Seret & Lepas imej anda di sini</p>
+          <p style="color:#888;margin-top:4px">atau klik untuk melayari dari komputer anda</p>
+          <button class="btn btn-outline" style="margin-top:12px" onclick="event.stopPropagation()">Pilih Fail Imej</button>
+          <p style="font-size:11px;color:#aaa;margin-top:10px">Format disokong: JPG, JPEG, PNG (maks 10MB) · Satu halaman logbook penuh</p>
+        </div>
+        <input type="file" id="fi" accept="image/*" style="display:none" onchange="handleFile(this)">
+      </div>
+
+      <div id="form-zone" style="display:none">
+        <div class="uploaded-preview">
+          <span style="font-size:22px">📄</span>
+          <div style="flex:1">
+            <div style="font-weight:500" id="fname-display">-</div>
+            <div style="font-size:11px;color:#888" id="fsize-display">-</div>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="resetUpload()">✕ Buang</button>
+        </div>
+        <button class="btn btn-primary btn-full" id="upload-btn" onclick="submitUpload()">
+          📤 Muat Naik & Proses OCR
+        </button>
+      </div>
+
+      <!-- Success result showing detected masa -->
+      <div class="success-box" id="success-box">
+        <strong>✅ Berjaya diproses!</strong><br>
+        <span id="success-detail"></span><br>
+        <div id="masa-detected" style="margin-top:8px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIHAT DATA -->
+  <div id="page-data" style="display:none">
+    <div class="page-header"><h1>Lihat Data</h1><p>Data kualiti air — klik Edit Mode untuk betulkan nilai OCR</p></div>
+    <div class="card" style="padding:14px">
+      <div class="filter-row">
+        <div class="fg"><label>Loji</label><input type="text" id="f-loji" placeholder="Nama loji..." style="width:140px"></div>
+        <div class="fg"><label>Daerah</label>
+          <select id="f-daerah" style="width:115px">
+            <option value="">Semua</option>
+            <option>Kuantan</option><option>Maran</option><option>Rompin</option>
+            <option>Pekan</option><option>Temerloh</option><option>Bera</option>
+            <option>Jerantut</option><option>Bentong</option><option>Cameron Highlands</option>
+            <option>Lipis</option><option>Raub</option>
+          </select>
+        </div>
+        <div class="fg"><label>From</label><input type="date" id="f-from" style="width:125px"></div>
+        <div class="fg"><label>To</label><input type="date" id="f-to" style="width:125px"></div>
+        <button class="btn btn-primary btn-sm" onclick="loadData()">🔍 Cari</button>
+        <div style="margin-left:auto;display:flex;gap:8px">
+          <button class="btn btn-outline btn-sm" id="edit-toggle" onclick="toggleEditMode()">✏️ Edit Mode</button>
+          <button class="btn btn-outline btn-sm" onclick="exportData()">⬇ Export CSV</button>
+        </div>
+      </div>
+
+      <div style="font-size:11px;color:#888;margin-bottom:10px">
+        Rekod dengan OCR accuracy &lt;80% ditandakan <span class="warn-label">⚠ Rendah</span> — semak dan edit sebelum export.
+        Kolum <strong>Masa Raw</strong> menunjukkan teks asal OCR dari logbook.
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th rowspan="4" class="th-meta" style="min-width:28px">No</th>
+              <th rowspan="4" class="th-meta" style="min-width:100px">Loji</th>
+              <th rowspan="4" class="th-meta" style="min-width:62px">Tarikh</th>
+              <th rowspan="4" class="th-meta" style="min-width:62px">Masa<br><small style="font-weight:400">(auto)</small></th>
+              <th rowspan="4" class="th-meta" style="min-width:32px">Shift<br><small style="font-weight:400">(auto)</small></th>
+              <th rowspan="4" class="th-meta" style="min-width:55px">Masa Raw<br>(OCR)</th>
+              <!-- UJIAN-UJIAN MAKMAL spans: Flow(1) + Air Mentah(8) + Tangki Flok(1) + Tangki Mendap(3) + Selepas Tapis(4) + Air Bersih(9) = 26 -->
+              <th colspan="25" class="th-main">UJIAN-UJIAN MAKMAL</th>
+              <th colspan="4" class="th-kapur">KAPUR / SODA ASH</th>
+              <th colspan="2" class="th-koagulan">KOAGULAN</th>
+              <th colspan="2" class="th-polymer">POLYMER</th>
+              <th colspan="4" class="th-klorin">KLORIN</th>
+              <th colspan="2" class="th-fluoride">FLUORIDE</th>
+              <th rowspan="4" class="th-paras">Paras Air (m)</th>
+              <!-- STATUS -->
+              <th rowspan="4" class="th-status" style="min-width:55px">Status</th>
+              <!-- OCR ACCURACY -->
+              <th rowspan="4" class="th-acc" style="min-width:65px">OCR<br>Acc. %</th>
+              <!-- TINDAKAN -->
+              <th rowspan="4" class="th-acc" style="min-width:45px">Simpan</th>
+            </tr>
+            <tr>
+              <th colspan="8" class="th-sub">Air Mentah</th>
+              <th colspan="1" class="th-sub">Tangki Flok</th>
+              <th colspan="3" class="th-sub">Tangki Mendap</th>
+              <th colspan="4" class="th-sub">Selepas Tapis</th>
+              <th colspan="9" class="th-sub">Air Bersih</th>
+              <th rowspan="3" class="th-kapur">(pre)<br>dos<br>kg/jam</th>
+              <th rowspan="3" class="th-kapur">(pre)<br>dos<br>ppm</th>
+              <th rowspan="3" class="th-kapur">(post)<br>dos<br>kg/jam</th>
+              <th rowspan="3" class="th-kapur">(post)<br>dos<br>ppm</th>
+              <th rowspan="3" class="th-koagulan">dos<br>lit/jam</th>
+              <th rowspan="3" class="th-koagulan">dos<br>ppm</th>
+              <th rowspan="3" class="th-polymer">dos<br>lit/jam</th>
+              <th rowspan="3" class="th-polymer">dos<br>ppm</th>
+              <th rowspan="3" class="th-klorin">(Pre)<br>dos<br>kg/jam</th>
+              <th rowspan="3" class="th-klorin">(Pre)<br>dos<br>ppm</th>
+              <th rowspan="3" class="th-klorin">(Post)<br>dos<br>kg/jam</th>
+              <th rowspan="3" class="th-klorin">(Post)<br>dos<br>ppm</th>
+              <th rowspan="3" class="th-fluoride">dos<br>lt/jam</th>
+              <th rowspan="3" class="th-fluoride">dos<br>ppm</th>
+            </tr>
+            <tr>
+              <th rowspan="2" style="min-width:55px">Flow<br>m³/jam</th>
+              <th rowspan="2" style="min-width:28px">pH</th>
+              <th rowspan="2" style="min-width:45px">NTU</th>
+              <th rowspan="2" style="min-width:40px">Warna<br>ptco</th>
+              <th rowspan="2" style="min-width:28px">Al<br>ppm</th>
+              <th rowspan="2" style="min-width:28px">Fe<br>ppm</th>
+              <th rowspan="2" style="min-width:28px">Mn<br>ppm</th>
+              <th rowspan="2" style="min-width:28px">Cl⁻<br>ppm</th>
+              <th rowspan="2" style="min-width:28px">pH</th>
+              <th rowspan="2" style="min-width:28px">pH</th>
+              <th rowspan="2" style="min-width:45px">NTU</th>
+              <th rowspan="2" style="min-width:40px">Warna<br>ptco</th>
+              <th rowspan="2" style="min-width:28px">pH</th>
+              <th rowspan="2" style="min-width:45px">NTU</th>
+              <th rowspan="2" style="min-width:40px">Warna<br>ptco</th>
+              <th rowspan="2" style="min-width:35px">Res.Al<br>ppm</th>
+              <th rowspan="2" style="min-width:28px">pH</th>
+              <th rowspan="2" style="min-width:45px">NTU</th>
+              <th rowspan="2" style="min-width:40px">Warna<br>ptco</th>
+              <th rowspan="2" style="min-width:28px">Fe<br>ppm</th>
+              <th rowspan="2" style="min-width:35px">Res.Al<br>ppm</th>
+              <th rowspan="2" style="min-width:28px">Mn<br>ppm</th>
+              <th rowspan="2" style="min-width:35px">Res.F<br>ppm</th>
+              <th rowspan="2" style="min-width:35px">Res.Cl₂<br>ppm</th>
+              <th rowspan="2" style="min-width:35px">Cl<br>ppm</th>
+            </tr>
+            <tr></tr>
+          </thead>
+          <tbody id="data-tbody">
+            <tr><td colspan="50" class="loading"><span class="spinner"></span>Memuatkan data...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="paging">
+        <span id="pg-info">-</span>
+        <div class="pg-btns" id="pg-btns"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEMAKAN -->
+  <div id="page-semakan" style="display:none">
+    <div class="page-header"><h1>Semakan</h1><p>Semak dan sahkan imej yang telah dimuat naik</p></div>
+    <div class="card">
+      <div class="top-act">
+        <button class="btn btn-outline btn-sm" onclick="loadImages()">🔄 Muat Semula</button>
+        <button class="btn btn-primary btn-sm" onclick="exportData()">⬇ Export CSV</button>
+      </div>
+      <div class="stabs">
+        <button class="stab active" onclick="filterImages('Belum Disemak',this)">⏱ Belum Disemak</button>
+        <button class="stab" onclick="filterImages('Sudah Disemak',this)">✅ Sudah Disemak</button>
+      </div>
+      <div id="semakan-list"><div class="loading"><span class="spinner"></span>Memuatkan...</div></div>
+    </div>
+  </div>
+
+  </div><!-- end .main -->
+</div><!-- end .app-page -->
+
+<script>
+// ── SUPABASE INIT ─────────────────────────────────────────
+const SUPABASE_URL  = 'https://eeczzlnboymjuxcdfxze.supabase.co';
+const SUPABASE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVlY3p6bG5ib3ltanV4Y2RmeHplIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3NTI2NTksImV4cCI6MjA5NDMyODY1OX0.cxnbjL-6zFLUe_EPe-Ruc27KZx_SHJkyflM1mnJBD0g';
+const API           = "http://localhost:8005"
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentToken = null;
+let currentUser  = null;
+let allData = [];
+let editMode = false;
+let pendingEdits = {};
+let currentPage = 1;
+const perPage = 20;
+let currentImgFilter = 'Belum Disemak';
+let selectedFile = null;
+
+const FIELDS = [
+  'flow', 'ph_mentah','ntu_mentah','warna_mentah','al','fe_mentah','mn_mentah','cl_mentah',
+  'ph_flok',
+  'ph_tangki','ntu_tangki','warna_tangki',
+  'ph_tapis','ntu_tapis','warna_tapis','res_al_tapis',
+  'ph_bersih','ntu_bersih','warna_bersih','fe_bersih','res_al_bersih','mn_bersih','res_f_bersih','res_cl2','cl_bersih',
+  'kapur_pre','kapur_pre_ppm','kapur_post','kapur_post_ppm',
+  'koagulan_lit','koagulan_ppm',
+  'polymer_lit','polymer_ppm',
+  'klorin_pre','klorin_pre_ppm','klorin_post','klorin_post_ppm',
+  'fluoride','fluoride_ppm',
+  'paras_air'
+];
+
+// ── AUTH ──────────────────────────────────────────────────
+async function checkSession() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    currentToken = session.access_token;
+    currentUser  = session.user;
+    showApp();
+  } else {
+    showAuth();
+  }
+}
+
+sb.auth.onAuthStateChange((event, session) => {
+  if (session) {
+    currentToken = session.access_token;
+    currentUser  = session.user;
+    if (event === 'SIGNED_IN') showApp();
+  } else {
+    currentToken = null;
+    currentUser  = null;
+    if (event === 'SIGNED_OUT') showAuth();
+  }
+});
+
+function showAuth() {
+  document.getElementById('auth-page').style.display = 'flex';
+  document.getElementById('app-page').style.display  = 'none';
+}
+
+function showApp() {
+  document.getElementById('auth-page').style.display = 'none';
+  document.getElementById('app-page').style.display  = 'block';
+  document.getElementById('user-email-display').textContent = currentUser?.email || '-';
+  loadStats();
+}
+
+function switchAuthTab(tab, btn) {
+  document.querySelectorAll('.auth-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('login-form').style.display  = tab === 'login'  ? 'block' : 'none';
+  document.getElementById('signup-form').style.display = tab === 'signup' ? 'block' : 'none';
+}
+
+async function handleLogin() {
+  const email    = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errEl    = document.getElementById('login-error');
+  const btn      = document.getElementById('login-btn');
+
+  errEl.style.display = 'none';
+  if (!email || !password) { showAuthError('login-error', 'Sila isi semua maklumat'); return; }
+
+  btn.textContent = 'Sedang log masuk...'; btn.disabled = true;
+
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) {
+    showAuthError('login-error', 'Emel atau kata laluan tidak sah');
+    btn.textContent = 'Log Masuk'; btn.disabled = false;
+  }
+}
+
+async function handleSignup() {
+  const name     = document.getElementById('signup-name').value.trim();
+  const email    = document.getElementById('signup-email').value.trim();
+  const password = document.getElementById('signup-password').value;
+  const confirm  = document.getElementById('signup-confirm').value;
+  const btn      = document.getElementById('signup-btn');
+
+  if (!name || !email || !password) { showAuthError('signup-error', 'Sila isi semua maklumat'); return; }
+  if (password.length < 6)          { showAuthError('signup-error', 'Kata laluan minimum 6 aksara'); return; }
+  if (password !== confirm)          { showAuthError('signup-error', 'Kata laluan tidak sepadan'); return; }
+
+  btn.textContent = 'Mendaftar...'; btn.disabled = true;
+  document.getElementById('signup-error').style.display = 'none';
+
+  const { error } = await sb.auth.signUp({
+    email, password,
+    options: { data: { full_name: name } }
+  });
+
+  if (error) {
+    showAuthError('signup-error', error.message);
+  } else {
+    document.getElementById('signup-success').textContent =
+      '✅ Akaun berjaya didaftar! Sila semak emel anda untuk pengesahan, kemudian log masuk.';
+    document.getElementById('signup-success').style.display = 'block';
+  }
+  btn.textContent = 'Daftar Akaun'; btn.disabled = false;
+}
+
+async function handleLogout() {
+  await sb.auth.signOut();
+  showToast('Anda telah log keluar', 'success');
+}
+
+function showAuthError(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent  = msg;
+  el.style.display = 'block';
+}
+
+// ── API HELPER ────────────────────────────────────────────
+async function apiGet(path) {
+  const res = await fetch(`${API}${path}`, {
+    headers: { 'Authorization': `Bearer ${currentToken}` }
+  });
+  if (res.status === 401) { await sb.auth.signOut(); return null; }
+  return res.json();
+}
+
+async function apiPost(path, body, isForm = false) {
+  const opts = {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${currentToken}` },
+  };
+  if (isForm) opts.body = body;
+  else { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+  const res = await fetch(`${API}${path}`, opts);
+  return res.json();
+}
+
+async function apiPut(path, body) {
+  const res = await fetch(`${API}${path}`, {
+    method:  'PUT',
+    headers: { 'Authorization': `Bearer ${currentToken}`, 'Content-Type': 'application/json' },
+    body:    JSON.stringify(body)
+  });
+  return res.json();
+}
+
+async function apiPatch(path) {
+  const res = await fetch(`${API}${path}`, {
+    method:  'PATCH',
+    headers: { 'Authorization': `Bearer ${currentToken}` }
+  });
+  return res.json();
+}
+
+// ── FILE UPLOAD ───────────────────────────────────────────
+function handleFile(input) {
+  if (!input.files.length) return;
+  selectedFile = input.files[0];
+  document.getElementById('fname-display').textContent = selectedFile.name;
+  document.getElementById('fsize-display').textContent = (selectedFile.size/1024/1024).toFixed(2)+' MB';
+  document.getElementById('up-zone').style.display  = 'none';
+  document.getElementById('form-zone').style.display = 'block';
+  document.getElementById('success-box').style.display = 'none';
+}
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('dragover');
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('image/')) {
+    selectedFile = f;
+    document.getElementById('fname-display').textContent = f.name;
+    document.getElementById('fsize-display').textContent = (f.size/1024/1024).toFixed(2)+' MB';
+    document.getElementById('up-zone').style.display  = 'none';
+    document.getElementById('form-zone').style.display = 'block';
+  }
+}
+function resetUpload() {
+  selectedFile = null;
+  document.getElementById('fi').value = '';
+  document.getElementById('up-zone').style.display   = 'block';
+  document.getElementById('form-zone').style.display = 'none';
+  document.getElementById('success-box').style.display = 'none';
+}
+
+async function submitUpload() {
+  const loji   = document.getElementById('loji-select').value;
+  const tarikh = document.getElementById('tarikh-input').value;
+  if (!loji)         return showToast('Sila pilih Loji','error');
+  if (!tarikh)       return showToast('Sila masukkan Tarikh','error');
+  if (!selectedFile) return showToast('Sila pilih fail imej','error');
+
+  const btn = document.getElementById('upload-btn');
+  btn.innerHTML = '<span class="spinner"></span> Memproses OCR...';
+  btn.disabled  = true;
+
+  const fd = new FormData();
+  fd.append('file',   selectedFile);
+  fd.append('loji',   loji);
+  fd.append('tarikh', tarikh);
+
+  try {
+    const data = await apiPost('/upload', fd, true);
+    if (data?.success) {
+      const box = document.getElementById('success-box');
+      document.getElementById('success-detail').textContent =
+        `${data.rows_extracted} baris dari ${loji}`;
+      const md = document.getElementById('masa-detected');
+      md.innerHTML = data.masa_detected?.length
+        ? '<strong>Masa & Shift dikesan:</strong><br>' +
+          data.masa_detected.map(m => `<span class="masa-tag">${m}</span>`).join(' ')
+        : '<span style="color:#888;font-size:11px">Masa tidak dapat dikesan — edit dalam Lihat Data</span>';
+      box.style.display = 'block';
+      resetUpload();
+      showToast(`✅ ${data.message}`,'success');
+      loadStats();
+    } else {
+      showToast('Ralat: '+(data?.detail||'Unknown'),'error');
+    }
+  } catch(e) {
+    showToast('Tidak dapat sambung ke server','error');
+  } finally {
+    btn.innerHTML = '📤 Muat Naik & Proses OCR';
+    btn.disabled  = false;
+  }
+}
+
+// ── DATA TABLE ────────────────────────────────────────────
+function toggleEditMode() {
+  editMode = !editMode;
+  const btn = document.getElementById('edit-toggle');
+  btn.textContent = editMode ? '💾 Simpan Semua' : '✏️ Edit Mode';
+  btn.style.background = editMode ? '#1D9E75' : '';
+  btn.style.color      = editMode ? '#fff' : '';
+  if (!editMode) saveAllEdits(); else renderTable();
+}
+
+async function loadData() {
+  const params = new URLSearchParams();
+  const l = document.getElementById('f-loji').value;
+  const d = document.getElementById('f-daerah').value;
+  const f = document.getElementById('f-from').value;
+  const t = document.getElementById('f-to').value;
+  if (l) params.set('loji', l); if (d) params.set('daerah', d);
+  if (f) params.set('from_date', f); if (t) params.set('to_date', t);
+
+  document.getElementById('data-tbody').innerHTML =
+    `<tr><td colspan="50" class="loading"><span class="spinner"></span>Memuatkan...</td></tr>`;
+  try {
+    allData = await apiGet(`/data?${params}`) || [];
+    currentPage = 1;
+    renderTable();
+  } catch(e) {
+    document.getElementById('data-tbody').innerHTML =
+      `<tr><td colspan="50" style="text-align:center;padding:30px;color:#E24B4A">
+        Tidak dapat sambung ke server.<br><small>Pastikan <code>python main.py</code> berjalan.</small>
+      </td></tr>`;
+  }
+}
+
+function renderTable() {
+  const start = (currentPage-1)*perPage;
+  const rows  = allData.slice(start, start+perPage);
+  if (!rows.length) {
+    document.getElementById('data-tbody').innerHTML =
+      `<tr><td colspan="50" style="text-align:center;padding:30px;color:#888">Tiada data</td></tr>`;
+    document.getElementById('pg-info').textContent = '0 rekod';
+    return;
+  }
+
+  document.getElementById('data-tbody').innerHTML = rows.map((r,i) => {
+    const idx = start+i;
+    const acc = r.ocr_accuracy;
+    const isLow = acc != null && acc < 80;
+
+    const accCell = editMode
+      ? `<td><input class="acc-input" type="number" min="0" max="100" value="${acc??''}"
+           placeholder="%" onchange="setEdit(${r.id},'ocr_accuracy',this.value)">
+           ${isLow?'<div class="warn-label" style="margin-top:2px">⚠ Rendah</div>':''}</td>`
+      : `<td>${acc!=null
+           ? `<div style="font-weight:500;font-size:11px;color:${acc>=80?'#1D9E75':'#E24B4A'}">${acc}%</div>
+              <div class="acc-bar"><div class="acc-fill ${acc>=80?'acc-high':acc>=50?'acc-med':'acc-low'}" style="width:${acc}%"></div></div>
+              ${isLow?'<div class="warn-label">⚠ Rendah</div>':''}`
+           : '<span style="color:#ccc;font-size:10px">Tiada</span>'}</td>`;
+
+    const saveCell = editMode
+      ? `<td><button style="background:#1D9E75;color:#fff;border:none;padding:3px 8px;border-radius:5px;font-size:10px;cursor:pointer" onclick="saveOneRow(${r.id})">💾</button></td>`
+      : `<td><span style="font-size:9px;color:#999">${r.is_edited?'✏':'-'}</span></td>`;
+
+    const dataCells = FIELDS.map(f =>
+      editMode
+        ? `<td><input class="edit-input" value="${r[f]??''}" onchange="setEdit(${r.id},'${f}',this.value)"></td>`
+        : `<td>${r[f]||'-'}</td>`
+    ).join('');
+
+    const shiftDisp = r.shift==='-'?`<span style="color:#E24B4A;font-size:10px">?</span>`:r.shift;
+    const masaDisp  = r.shift==='-'?`<span style="color:#E24B4A;font-size:10px">${r.masa||'?'}</span>`:(r.masa||'-');
+    const statusBadge = r.status?`<span class="badge badge-${r.status.toLowerCase()}">${r.status}</span>`:'-';
+
+    return `<tr ${isLow?'class="warn-row"':''}>
+      <td>${idx+1}</td>
+      <td class="left" style="font-size:10px;min-width:95px">${r.loji}</td>
+      <td>${r.tarikh}</td>
+      <td>${masaDisp}</td>
+      <td>${shiftDisp}</td>
+      <td style="font-size:9px;color:#888;max-width:55px;overflow:hidden;text-overflow:ellipsis" title="${r.masa_raw||''}">${r.masa_raw||'-'}</td>
+      ${dataCells}
+      <td>${statusBadge}</td>
+      ${accCell}${saveCell}
+    </tr>`;
+  }).join('');
+
+  const total = allData.length;
+  document.getElementById('pg-info').textContent =
+    `Showing ${start+1}–${Math.min(start+perPage,total)} of ${total} results`;
+  document.getElementById('pg-btns').innerHTML =
+    Array.from({length:Math.min(Math.ceil(total/perPage),5)},(_,i)=>
+      `<button class="pg-btn ${i+1===currentPage?'active':''}" onclick="goPage(${i+1})">${i+1}</button>`
+    ).join('');
+}
+
+function setEdit(id, field, value) {
+  if (!pendingEdits[id]) pendingEdits[id] = {};
+  pendingEdits[id][field] = value;
+}
+
+async function saveOneRow(id) {
+  if (!pendingEdits[id]) return showToast('Tiada perubahan','warning');
+  const data = await apiPut(`/data/${id}`, {...pendingEdits[id], is_edited:true});
+  if (data?.success) { delete pendingEdits[id]; showToast('✅ Baris dikemaskini','success'); loadData(); }
+  else showToast('Ralat simpan','error');
+}
+
+async function saveAllEdits() {
+  const ids = Object.keys(pendingEdits);
+  if (!ids.length) { renderTable(); return; }
+  let saved = 0;
+  for (const id of ids) {
+    const data = await apiPut(`/data/${id}`, {...pendingEdits[id], is_edited:true});
+    if (data?.success) { delete pendingEdits[id]; saved++; }
+  }
+  showToast(`✅ ${saved} rekod dikemaskini`,'success');
+  loadData();
+}
+
+function goPage(p) { currentPage = p; renderTable(); }
+
+function exportData() {
+  const p = new URLSearchParams();
+  const l = document.getElementById('f-loji')?.value;
+  const d = document.getElementById('f-daerah')?.value;
+  if (l) p.set('loji', l); if (d) p.set('daerah', d);
+  // Include token in URL for export (simple approach)
+  window.location.href = `${API}/export?${p}&token=${currentToken}`;
+}
+
+// ── SEMAKAN ───────────────────────────────────────────────
+async function loadImages() {
+  document.getElementById('semakan-list').innerHTML =
+    `<div class="loading"><span class="spinner"></span>Memuatkan...</div>`;
+  const imgs = await apiGet(`/images?status=${encodeURIComponent(currentImgFilter)}`) || [];
+  renderImages(imgs);
+}
+
+function renderImages(imgs) {
+  if (!imgs.length) {
+    document.getElementById('semakan-list').innerHTML =
+      `<p style="text-align:center;color:#888;padding:20px">Tiada imej ditemui</p>`;
+    return;
+  }
+  document.getElementById('semakan-list').innerHTML = imgs.map(img => `
+    <div class="semakan-row">
+      <div style="width:38px;height:38px;border-radius:8px;background:#f0f0f0;border:1px solid #e0e0e0;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">📄</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:500;color:#1D9E75;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${img.filename}</div>
+        <div style="font-size:11px;color:#888;margin-top:2px">${img.tarikh} · ${img.daerah} · ${img.loji}</div>
+        <div style="font-size:11px;color:#888">${img.rows_extracted} baris · ${img.uploaded_at?.slice(0,16)||'-'}</div>
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="semakImage(${img.id},this)"
+        ${img.status==='Sudah Disemak'?'disabled':''}>
+        ${img.status==='Sudah Disemak'?'✅ Disemak':'👁 Semak'}
+      </button>
+    </div>`).join('');
+}
+
+async function semakImage(id, btn) {
+  const data = await apiPatch(`/images/${id}/semak`);
+  if (data?.success) { btn.textContent='✅ Disemak'; btn.disabled=true; showToast('Status dikemaskini','success'); }
+}
+
+function filterImages(status, btn) {
+  currentImgFilter = status;
+  document.querySelectorAll('.stab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  loadImages();
+}
+
+// ── PAGE NAV ──────────────────────────────────────────────
+function showPage(page, btn) {
+  document.querySelectorAll('[id^="page-"]').forEach(p=>p.style.display='none');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+page).style.display='block';
+  if (btn) btn.classList.add('active');
+  if (page==='dashboard') loadStats();
+  if (page==='data')      loadData();
+  if (page==='semakan')   loadImages();
+}
+
+async function loadStats() {
+  const d = await apiGet('/stats');
+  if (!d) return;
+  document.getElementById('s-total').textContent    = d.total_records;
+  document.getElementById('s-normal').textContent   = d.normal;
+  document.getElementById('s-amaran').textContent   = d.amaran;
+  document.getElementById('s-kritikal').textContent = d.kritikal;
+  document.getElementById('s-low').textContent      = d.low_accuracy||0;
+}
+
+// ── TOAST ─────────────────────────────────────────────────
+function showToast(msg, type='success') {
+  const t = document.createElement('div');
+  t.className = `toast toast-${type}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 3500);
+}
+
+// ── INIT ──────────────────────────────────────────────────
+checkSession();
+</script>
+</body>
+</html>
