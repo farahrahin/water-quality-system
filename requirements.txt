@@ -11,4 +11,4 @@ pillow
 python-dotenv
 jinja2
 aiofiles
-inference-sdk==0.9.18
+inference-sdk>=0.9.22,<1.0.0
