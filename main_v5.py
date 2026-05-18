@@ -347,15 +347,13 @@ def parse_masa_shift(raw_text: str) -> dict:
 # ─────────────────────────────────────────────────────────────
 
 print("Loading EasyOCR...")
+
 reader = None
 
 def get_reader():
     global reader
 
     if reader is None:
-        import os
-
-        os.makedirs("/tmp/easyocr", exist_ok=True)
 
         print("Loading EasyOCR...")
 
