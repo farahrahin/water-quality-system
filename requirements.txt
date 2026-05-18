@@ -11,3 +11,4 @@ pillow
 python-dotenv
 jinja2
 aiofiles
+inference-sdk
