@@ -3,12 +3,14 @@ uvicorn
 python-multipart
 sqlalchemy
 psycopg2-binary
-PyJWT
 requests
 easyocr
-opencv-python-headless
+opencv-python-headless==4.10.0.84
 pillow
 python-dotenv
 jinja2
 aiofiles
+python-jose
 inference-sdk>=0.9.22,<1.0.0
+torch
+torchvision
