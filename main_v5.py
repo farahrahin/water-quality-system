@@ -37,6 +37,10 @@ from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Float, ForeignKey
 
 app = FastAPI(title="PAIP Water Quality System", version="5.0.0")
+os.makedirs("static", exist_ok=True)
+os.makedirs("uploads", exist_ok=True)
+os.makedirs("cropped", exist_ok=True)
+
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 app.add_middleware(
