@@ -18,4 +18,4 @@ COPY . .
 
 EXPOSE 8005
 
-CMD sh -c "uvicorn main_v5:app --host 0.0.0.0 --port ${PORT:-8005}"
+CMD ["python","run.py"]
