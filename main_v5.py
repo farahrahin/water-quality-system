@@ -408,27 +408,53 @@ def classify_status(row: dict) -> str:
     elif violations <= 2: return "Amaran"
     else:                 return "Kritikal"
 
-def detect_and_crop(image_path: str, output_path: str) -> bool:
+def detect_and_crop(image_path:str, output_path:str)->bool:
+
     try:
-        result = roboflow_client.run_workflow(
+
+        result=roboflow_client.run_workflow(
             workspace_name="faras-workspace",
             workflow_id="table-detection-model-2",
-            images={"image": image_path},
-            parameters={"confidence": 0.4},
+            images={"image":image_path},
+            parameters={"confidence":0.4},
             use_cache=False
         )
-        if not result or not result[0]['predictions']['predictions']:
+
+        if not result:
             return False
-        pred = result[0]['predictions']['predictions'][0]
-        x, y, w, h = pred['x'], pred['y'], pred['width'], pred['height']
-        img  = Image.open(image_path)
-        img.crop((
-            max(0, x-w/2), max(0, y-h/2),
-            min(img.width, x+w/2), min(img.height, y+h/2)
-        )).save(output_path)
+
+        predictions=result[0]["predictions"]["predictions"]
+
+        if len(predictions)==0:
+            return False
+
+        pred=predictions[0]
+
+        x=pred["x"]
+        y=pred["y"]
+        w=pred["width"]
+        h=pred["height"]
+
+        img=Image.open(image_path)
+
+        cropped=img.crop(
+            (
+                max(0,x-w/2),
+                max(0,y-h/2),
+                min(img.width,x+w/2),
+                min(img.height,y+h/2)
+            )
+        )
+
+        cropped.save(output_path)
+
         return True
+
+
     except Exception as e:
-        print(f"Roboflow error: {e}")
+
+        print("Roboflow error:",e)
+
         return False
 
 def get_row_boundaries(img: np.ndarray) -> list:
