@@ -12,7 +12,7 @@ from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Depends, Req
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from sqlalchemy import create_engine, Column, Integer, String, Float, Boolean, DateTime, text
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 from inference_sdk import InferenceHTTPClient
