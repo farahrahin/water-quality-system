@@ -591,52 +591,38 @@ def ocr_cell(
     x2: int,
     y2: int,
     col_name: str=""
-) -> str:
+):
 
-    pad = 3
-
-    y1p = max(0, y1-pad)
-    y2p = min(img.shape[0], y2+pad)
-
-    x1p = max(0, x1-pad)
-    x2p = min(img.shape[1], x2+pad)
-
-    cell = img[y1p:y2p, x1p:x2p]
+    cell = img[y1:y2, x1:x2]
 
     if cell is None or cell.size == 0:
         return ""
 
-    cell_big = cv2.resize(
+    cell = cv2.resize(
         cell,
         None,
         fx=2,
-        fy=2,
-        interpolation=cv2.INTER_CUBIC
+        fy=2
     )
 
-    cell_clean = cv2.medianBlur(
-        cell_big,
-        3
-    )
-
-    my_reader = get_reader()
+    ocr_engine = get_reader()
 
     if col_name in NUMERIC_COLS:
 
-        result = my_reader.readtext(
-            cell_clean,
+        result = ocr_engine.readtext(
+            cell,
             detail=0,
             allowlist='0123456789.<>-'
         )
 
     else:
 
-        result = my_reader.readtext(
-            cell_clean,
+        result = ocr_engine.readtext(
+            cell,
             detail=0
         )
 
-    return " ".join(result).strip()
+    return " ".join(result)
     
 def extract_table(img: np.ndarray,
                   row_boundaries: list,
