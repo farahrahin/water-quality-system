@@ -8,7 +8,6 @@ requests
 easyocr
 opencv-python-headless
 pillow
-inference-sdk
 python-dotenv
 jinja2
 aiofiles
