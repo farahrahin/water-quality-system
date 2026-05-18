@@ -353,20 +353,22 @@ def get_reader():
     global reader
 
     if reader is None:
-    import os
+        import os
 
-    os.makedirs("/tmp/easyocr", exist_ok=True)
+        os.makedirs("/tmp/easyocr", exist_ok=True)
 
-    print("Loading EasyOCR...")
+        print("Loading EasyOCR...")
 
-    reader = easyocr.Reader(
-        ['en'],
-        gpu=False,
-        model_storage_directory="/tmp/easyocr",
-        download_enabled=True
-    )
+        reader = easyocr.Reader(
+            ['en'],
+            gpu=False,
+            model_storage_directory="/tmp/easyocr",
+            download_enabled=True
+        )
 
-    print("EasyOCR Ready")
+        print("EasyOCR Ready")
+
+    return reader
 
 roboflow_client = InferenceHTTPClient(
     api_url="https://serverless.roboflow.com",
