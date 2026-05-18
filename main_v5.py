@@ -589,40 +589,52 @@ def ocr_cell(
     x2: int,
     y2: int,
     col_name: str=""
-):
+) -> str:
 
-    cell = img[y1:y2, x1:x2]
+    pad=3
 
-    if cell is None or cell.size == 0:
+    y1p=max(0,y1-pad)
+    y2p=min(img.shape[0],y2+pad)
+
+    x1p=max(0,x1-pad)
+    x2p=min(img.shape[1],x2+pad)
+
+    cell=img[y1p:y2p,x1p:x2p]
+
+    if cell is None or cell.size==0:
         return ""
 
-    cell = cv2.resize(
+    cell_big=cv2.resize(
         cell,
         None,
         fx=2,
-        fy=2
+        fy=2,
+        interpolation=cv2.INTER_CUBIC
     )
 
-    my_reader = get_reader()
+    cell_clean=cv2.medianBlur(
+        cell_big,
+        3
+    )
 
-    try:
+    ocr_reader = get_reader()
 
-        if col_name in NUMERIC_COLS:
+    if col_name in NUMERIC_COLS:
 
-            result = my_reader.readtext(
-                cell,
-                detail=0,
-                allowlist='0123456789.<>-'
-            )
+        result=ocr_reader.readtext(
+            cell_clean,
+            detail=0,
+            allowlist='0123456789.<>-'
+        )
 
-        else:
+    else:
 
-            result = my_reader.readtext(
-                cell,
-                detail=0
-            )
+        result=ocr_reader.readtext(
+            cell_clean,
+            detail=0
+        )
 
-        return " ".join(result)
+    return " ".join(result).strip()
 
     except Exception as e:
 
