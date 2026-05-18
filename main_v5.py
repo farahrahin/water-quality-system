@@ -354,7 +354,7 @@ def get_reader():
 
     if reader is None:
         print("Loading EasyOCR...")
-        reader = easyocr.Reader(['en'])
+        reader = easyocr.Reader(['en'], gpu=False)
         print("EasyOCR Ready")
 
     return reader
@@ -409,7 +409,7 @@ def detect_and_crop(image_path: str, output_path: str) -> bool:
             workflow_id="table-detection-model-2",
             images={"image": image_path},
             parameters={"confidence": 0.4},
-            use_cache=True
+            uuse_cache=False
         )
         if not result or not result[0]['predictions']['predictions']:
             return False
