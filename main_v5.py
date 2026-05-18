@@ -359,9 +359,7 @@ def get_reader():
 
         reader = easyocr.Reader(
             ['en'],
-            gpu=False,
-            model_storage_directory="/tmp/easyocr",
-            download_enabled=True
+            gpu=False
         )
 
         print("EasyOCR Ready")
@@ -417,7 +415,7 @@ def detect_and_crop(image_path: str, output_path: str) -> bool:
             workflow_id="table-detection-model-2",
             images={"image": image_path},
             parameters={"confidence": 0.4},
-            uuse_cache=False
+            use_cache=False
         )
         if not result or not result[0]['predictions']['predictions']:
             return False
@@ -605,24 +603,32 @@ def ocr_cell(
         fy=2
     )
 
-    ocr_engine = get_reader()
+    my_reader = get_reader()
 
-    if col_name in NUMERIC_COLS:
+    try:
 
-        result = ocr_engine.readtext(
-            cell,
-            detail=0,
-            allowlist='0123456789.<>-'
-        )
+        if col_name in NUMERIC_COLS:
 
-    else:
+            result = my_reader.readtext(
+                cell,
+                detail=0,
+                allowlist='0123456789.<>-'
+            )
 
-        result = ocr_engine.readtext(
-            cell,
-            detail=0
-        )
+        else:
 
-    return " ".join(result)
+            result = my_reader.readtext(
+                cell,
+                detail=0
+            )
+
+        return " ".join(result)
+
+    except Exception as e:
+
+        print("OCR ERROR:", e)
+
+        return ""
     
 def extract_table(img: np.ndarray,
                   row_boundaries: list,
