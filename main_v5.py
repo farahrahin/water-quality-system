@@ -343,7 +343,17 @@ def parse_masa_shift(raw_text: str) -> dict:
 # ─────────────────────────────────────────────────────────────
 
 print("Loading EasyOCR...")
-reader = easyocr.Reader(['en'])
+reader = None
+
+def get_reader():
+    global reader
+
+    if reader is None:
+        print("Loading EasyOCR...")
+        reader = easyocr.Reader(['en'])
+        print("EasyOCR Ready")
+
+    return reader
 print("EasyOCR ready!")
 
 roboflow_client = InferenceHTTPClient(
@@ -578,7 +588,9 @@ def ocr_cell(img: np.ndarray, x1: int, y1: int, x2: int, y2: int,
                                  allowlist='0123456789.<>-')
     else:
         # masa_shift column — allow full text including letters
-        result = reader.readtext(cell_clean, detail=0)
+        ocr_reader = get_reader()
+
+        result = ocr_reader.readtext(...)
     return " ".join(result).strip()
 
 def extract_table(img: np.ndarray,
@@ -1189,5 +1201,12 @@ def get_stats(
     }
 
 
-if __name__ == "__main__":
-    uvicorn.run("main_v5:app", host="0.0.0.0", port=8005, reload=True)
+if __name__=="__main__":
+    port=int(os.environ.get("PORT",8000))
+
+    uvicorn.run(
+        "main_v5:app",
+        host="0.0.0.0",
+        port=port
+)
+    
