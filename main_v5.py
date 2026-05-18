@@ -602,9 +602,10 @@ def ocr_cell(img: np.ndarray, x1: int, y1: int, x2: int, y2: int,
                                  allowlist='0123456789.<>-')
     else:
         # masa_shift column — allow full text including letters
-        ocr_reader = get_reader()
-
-        result = ocr_reader.readtext(...)
+        result=ocr_reader.readtext(
+            cell_clean,
+            detail=0
+        )
     return " ".join(result).strip()
 
 def extract_table(img: np.ndarray,
