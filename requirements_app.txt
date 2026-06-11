@@ -1,0 +1,15 @@
+fastapi
+uvicorn[standard]
+python-multipart
+sqlalchemy
+psycopg2-binary
+PyJWT
+python-jose
+requests
+easyocr
+opencv-python-headless
+pillow
+python-dotenv
+jinja2
+aiofiles
+inference-sdk==0.9.23

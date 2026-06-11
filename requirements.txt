@@ -1,15 +1,18 @@
 fastapi
-uvicorn
+uvicorn[standard]
 python-multipart
 sqlalchemy
 psycopg2-binary
-python-jose[cryptography]
+PyJWT
+python-jose
 requests
+# CPU-only torch - significantly smaller than default (saves ~500MB RAM)
+torch==2.1.0+cpu --extra-index-url https://download.pytorch.org/whl/cpu
+torchvision==0.16.0+cpu --extra-index-url https://download.pytorch.org/whl/cpu
 easyocr
 opencv-python-headless
 pillow
 python-dotenv
 jinja2
 aiofiles
-numpy
-inference-sdk
+inference-sdk==0.9.23
