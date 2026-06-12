@@ -327,38 +327,61 @@ def detect_and_crop(image_path: str, output_path: str) -> bool:
 #   91.8-99.3%: Right side (kapur/koagulan/polymer/klorin/fluoride)
 # ─────────────────────────────────────────────────────────────
 
-# Fallback static fracs (used if adaptive detection fails)
+# Fallback static fracs — calibrated via Sobel edge detection on actual PAIP logbook scans.
+# These cover ALL columns including Kapur, Koagulan, Polymer, Klorin, Fluoride, Paras Air.
+# The PAIP form is physically consistent; fractions are stable across different scans.
 COLUMN_FRACS_STATIC = [
-    ("flow",           0.0523, 0.0780),
-    ("ph_mentah",      0.0780, 0.1013),
-    ("ntu_mentah",     0.1013, 0.1242),
-    ("warna_mentah",   0.1242, 0.1503),
-    ("al",             0.1503, 0.1732),
-    ("fe_mentah",      0.1732, 0.1954),
-    ("mn_mentah",      0.1954, 0.2177),
-    ("cl_mentah",      0.2177, 0.2405),
-    ("ph_flok",        0.2405, 0.2661),
-    ("ph_tangki",      0.2661, 0.2884),
-    ("ntu_tangki",     0.2884, 0.3107),
-    ("warna_tangki",   0.3107, 0.3363),
-    ("ph_tapis",       0.3363, 0.3586),
-    ("ntu_tapis",      0.3586, 0.3803),
-    ("warna_tapis",    0.3803, 0.4059),
-    ("res_al_tapis",   0.4059, 0.4276),
-    ("ph_bersih",      0.6292, 0.6604),
-    ("ntu_bersih",     0.6604, 0.6916),
-    ("warna_bersih",   0.6916, 0.7228),
-    ("fe_bersih",      0.7228, 0.7540),
-    ("res_al_bersih",  0.7540, 0.7852),
-    ("mn_bersih",      0.7852, 0.8163),
-    ("res_f_bersih",   0.8163, 0.8475),
-    ("res_cl2",        0.8475, 0.8787),
-    ("cl_bersih",      0.8787, 0.9099),
-    ("kapur_post",     0.9099, 0.9265),
-    ("kapur_post_ppm", 0.9265, 0.9431),
-    ("koagulan_lit",   0.9431, 0.9597),
-    ("koagulan_ppm",   0.9597, 0.9763),
-    ("klorin_post",    0.9763, 0.9930),
+    # AIR MENTAH
+    ("flow",             0.0505, 0.0754),
+    ("ph_mentah",        0.0754, 0.0986),
+    ("ntu_mentah",       0.0986, 0.1217),
+    ("warna_mentah",     0.1217, 0.1485),
+    ("al",               0.1485, 0.1710),
+    ("fe_mentah",        0.1710, 0.1942),
+    ("mn_mentah",        0.1942, 0.2167),
+    ("cl_mentah",        0.2167, 0.2399),
+    # TANGKI FLOK
+    ("ph_flok",          0.2399, 0.2660),
+    # TANGKI MENDAP
+    ("ph_tangki",        0.2660, 0.2880),
+    ("ntu_tangki",       0.2880, 0.3106),
+    ("warna_tangki",     0.3106, 0.3367),
+    # SELEPAS TAPIS
+    ("ph_tapis",         0.3367, 0.3587),
+    ("ntu_tapis",        0.3587, 0.3800),
+    ("warna_tapis",      0.3800, 0.4056),
+    ("res_al_tapis",     0.4056, 0.4276),
+    # AIR BERSIH
+    ("ph_bersih",        0.4276, 0.4489),
+    ("ntu_bersih",       0.4489, 0.4709),
+    ("warna_bersih",     0.4709, 0.4964),
+    ("fe_bersih",        0.4964, 0.5184),
+    ("res_al_bersih",    0.5184, 0.5404),
+    ("mn_bersih",        0.5404, 0.5624),
+    ("res_f_bersih",     0.5624, 0.5843),
+    ("res_cl2",          0.5843, 0.6057),
+    ("cl_bersih",        0.6057, 0.6283),
+    # KAPUR / SODA ASH
+    ("kapur_pre",        0.6283, 0.6544),
+    ("kapur_pre_ppm",    0.6544, 0.6770),
+    ("kapur_post",       0.6770, 0.7037),
+    ("kapur_post_ppm",   0.7037, 0.7257),
+    # KOAGULAN
+    ("koagulan_lit",     0.7257, 0.7506),
+    ("koagulan_ppm",     0.7506, 0.7726),
+    # POLYMER
+    ("polymer_lit",      0.7726, 0.7975),
+    ("polymer_ppm",      0.7975, 0.8195),
+    # KLORIN
+    ("klorin_pre",       0.8195, 0.8462),
+    ("klorin_pre_ppm",   0.8462, 0.8682),
+    ("klorin_post",      0.8682, 0.8949),
+    ("klorin_post_ppm",  0.8949, 0.9163),
+    # FLUORIDE
+    ("fluoride",         0.9163, 0.9430),
+    ("fluoride_ppm",     0.9430, 0.9650),
+    # PARAS AIR
+    ("paras_air",        0.9650, 0.9917),
 ]
 
 NUMERIC_COLS = {
@@ -406,59 +429,51 @@ def _cluster_positions(positions, gap=8):
 
 def detect_grid(img: np.ndarray):
     """
-    Detect horizontal row lines and vertical column lines from the image.
-    Returns (col_boundaries, row_boundaries) as lists of pixel positions,
-    or (None, None) if detection fails.
+    Detect column and row boundaries using Sobel edge detection.
+    Works on images where grid lines are faint or thin.
+    Returns (col_lines, row_lines, get_subcols).
     """
     h, w = img.shape[:2]
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
     enhanced = clahe.apply(gray)
-    thresh = cv2.adaptiveThreshold(
-        enhanced, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-        cv2.THRESH_BINARY_INV, 15, 10
-    )
 
-    # ── Horizontal lines (rows) ──────────────────────────────
-    h_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (w // 6, 1))
-    h_lines  = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, h_kernel, iterations=2)
-    row_sums = np.sum(h_lines, axis=1)
-    raw_ys   = np.where(row_sums > w * 0.20)[0]
-    row_lines = _cluster_positions(list(raw_ys))
+    # ── Vertical lines via Sobel ─────────────────────────────
+    sobelx     = cv2.Sobel(enhanced, cv2.CV_64F, 1, 0, ksize=1)
+    sobelx     = np.abs(sobelx)
+    sobelx_u8  = (sobelx / (sobelx.max() + 1e-6) * 255).astype(np.uint8)
+    col_sums   = np.sum(sobelx_u8, axis=0).astype(float)
+    col_smooth = np.convolve(col_sums, np.ones(3) / 3, mode='same')
+    col_thresh = col_smooth.mean() * 2.5
+    raw_xs     = np.where(col_smooth > col_thresh)[0]
+    col_lines  = _cluster_positions(list(raw_xs), gap=8)
 
-    # ── Vertical lines (cols) — use header region only ───────
-    h1 = int(h * 0.15); h2 = int(h * 0.30)
-    header     = img[h1:h2, :]
-    gray_hdr   = cv2.cvtColor(header, cv2.COLOR_BGR2GRAY)
-    enhanced_h = clahe.apply(gray_hdr)
-    thresh_h   = cv2.adaptiveThreshold(
-        enhanced_h, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-        cv2.THRESH_BINARY_INV, 11, 5
-    )
-    hh       = thresh_h.shape[0]
-    v_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, hh // 3))
-    v_lines  = cv2.morphologyEx(thresh_h, cv2.MORPH_OPEN, v_kernel, iterations=1)
-    col_sums = np.sum(v_lines, axis=0)
-    raw_xs   = np.where(col_sums > hh * 0.30)[0]
-    col_lines = _cluster_positions(list(raw_xs))
+    # ── Horizontal lines via Sobel ───────────────────────────
+    sobely     = cv2.Sobel(enhanced, cv2.CV_64F, 0, 1, ksize=1)
+    sobely     = np.abs(sobely)
+    sobely_u8  = (sobely / (sobely.max() + 1e-6) * 255).astype(np.uint8)
+    row_sums   = np.sum(sobely_u8, axis=1).astype(float)
+    row_smooth = np.convolve(row_sums, np.ones(3) / 3, mode='same')
+    row_thresh = row_smooth.mean() * 2.5
+    raw_ys     = np.where(row_smooth > row_thresh)[0]
+    row_lines  = _cluster_positions(list(raw_ys), gap=8)
 
-    # ── Detect sub-column lines within each major section ────
+    # ── Subcol getter (reuses Sobel within section) ──────────
     def get_subcols(x_start, x_end, y_frac_start=0.28, y_frac_end=0.35):
-        region = img[int(h*y_frac_start):int(h*y_frac_end), x_start:x_end]
+        region = img[int(h * y_frac_start):int(h * y_frac_end), x_start:x_end]
         if region.size == 0:
             return []
-        g = cv2.cvtColor(region, cv2.COLOR_BGR2GRAY)
-        e = clahe.apply(g)
-        t = cv2.adaptiveThreshold(e, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                  cv2.THRESH_BINARY_INV, 11, 5)
-        rh = t.shape[0]
-        vk = cv2.getStructuringElement(cv2.MORPH_RECT, (1, rh // 2))
-        vl = cv2.morphologyEx(t, cv2.MORPH_OPEN, vk)
-        cs = np.sum(vl, axis=0)
-        rxs = np.where(cs > rh * 0.3)[0]
-        return [x + x_start for x in _cluster_positions(list(rxs))]
+        g   = cv2.cvtColor(region, cv2.COLOR_BGR2GRAY)
+        sx  = cv2.Sobel(g, cv2.CV_64F, 1, 0, ksize=1)
+        sx  = np.abs(sx)
+        su8 = (sx / (sx.max() + 1e-6) * 255).astype(np.uint8)
+        cs  = np.sum(su8, axis=0).astype(float)
+        csm = np.convolve(cs, np.ones(3) / 3, mode='same')
+        cth = csm.mean() * 2.0
+        rxs = np.where(csm > cth)[0]
+        return [x + x_start for x in _cluster_positions(list(rxs), gap=8)]
 
-    print(f"Grid detection: {len(col_lines)} major col lines, {len(row_lines)} row lines")
+    print(f"Sobel detection: {len(col_lines)} col lines, {len(row_lines)} row lines")
     return col_lines, row_lines, get_subcols
 
 def build_column_boundaries(img: np.ndarray, col_lines, get_subcols):
@@ -1071,4 +1086,3 @@ def get_stats(request: Request, user=Depends(get_current_user)):
 if __name__ == "__main__":
     uvicorn.run("main_v6:app", host="0.0.0.0",
                 port=int(os.environ.get("PORT", 8000)), reload=False)
-
