@@ -313,57 +313,52 @@ def detect_and_crop(image_path: str, output_path: str) -> bool:
         return False
 
 # ─────────────────────────────────────────────────────────────
-# CALIBRATED COLUMN DEFINITIONS
-# Percentages derived from analyzing actual PAIP logbook images.
-# Column layout (per image width):
-#   0-5%    : masa_shift (hardcoded per row, not OCR'd)
-#   5-42.8% : Air Mentah (8 equal sub-cols)
-#   42.8-62.9% : Tangki (Flok x1, Mendap x3, Tapis x4)
-#   62.9-91.7% : Air Bersih (9 equal sub-cols)
-#   91.7-99.2% : Right side (kapur/koagulan/polymer/klorin/fluoride/paras)
+# COLUMN & ROW DEFINITIONS
+# Derived from actual PAIP logbook grid line detection.
+# These are FRACTIONAL positions (0.0-1.0) of image width/height.
+# The PAIP form is consistent — same column layout every page.
+#
+# PAIP logbook column structure:
+#   0-5.2%   : MASA (hardcoded per row, not OCR'd)
+#   5.2-24%  : AIR MENTAH (8 sub-cols: flow,ph,NTU,warna,Al,Fe,Mn,Cl)
+#   24-26.6% : TANGKI FLOK (ph_flok)
+#   26.6-42.8%: TANGKI MENDAP (3) + SELEPAS TAPIS (4)
+#   62.9-91.8%: AIR BERSIH (9 sub-cols)
+#   91.8-99.3%: Right side (kapur/koagulan/polymer/klorin/fluoride)
 # ─────────────────────────────────────────────────────────────
 
-# Fractional column map  (name, x_start_frac, x_end_frac)
-# Right-side fractions are best-effort given narrow available width.
-COLUMN_FRACS = [
-    # AIR MENTAH  (5% – 42.8%, 8 equal cols)
-    ("flow",           0.050, 0.097),
-    ("ph_mentah",      0.097, 0.144),
-    ("ntu_mentah",     0.144, 0.192),
-    ("warna_mentah",   0.192, 0.239),
-    ("al",             0.239, 0.286),
-    ("fe_mentah",      0.286, 0.333),
-    ("mn_mentah",      0.333, 0.381),
-    ("cl_mentah",      0.381, 0.428),
-    # TANGKI FLOK (1 col)
-    ("ph_flok",        0.428, 0.453),
-    # TANGKI MENDAP (3 cols)
-    ("ph_tangki",      0.453, 0.478),
-    ("ntu_tangki",     0.478, 0.503),
-    ("warna_tangki",   0.503, 0.528),
-    # SELEPAS TAPIS (4 cols)
-    ("ph_tapis",       0.528, 0.553),
-    ("ntu_tapis",      0.553, 0.578),
-    ("warna_tapis",    0.578, 0.603),
-    ("res_al_tapis",   0.603, 0.629),
-    # AIR BERSIH (9 equal cols)
-    ("ph_bersih",      0.629, 0.677),
-    ("ntu_bersih",     0.677, 0.693),
-    ("warna_bersih",   0.693, 0.725),
-    ("fe_bersih",      0.725, 0.757),
-    ("res_al_bersih",  0.757, 0.789),
-    ("mn_bersih",      0.789, 0.821),
-    ("res_f_bersih",   0.821, 0.853),
-    ("res_cl2",        0.853, 0.885),
-    ("cl_bersih",      0.885, 0.917),
-    # RIGHT SIDE best-effort (0.917-0.992 = 75px per 1000px)
-    # Kapur pre+post each ~2 sub-cols, Koagulan 2, Polymer 2, Klorin 4, Fluoride 2, Paras 1
-    # We grab the 3 widest sections and leave the rest empty
-    ("kapur_post",     0.917, 0.935),
-    ("kapur_post_ppm", 0.935, 0.950),
-    ("koagulan_lit",   0.950, 0.965),
-    ("koagulan_ppm",   0.965, 0.980),
-    ("klorin_post",    0.980, 0.992),
+# Fallback static fracs (used if adaptive detection fails)
+COLUMN_FRACS_STATIC = [
+    ("flow",           0.0523, 0.0780),
+    ("ph_mentah",      0.0780, 0.1013),
+    ("ntu_mentah",     0.1013, 0.1242),
+    ("warna_mentah",   0.1242, 0.1503),
+    ("al",             0.1503, 0.1732),
+    ("fe_mentah",      0.1732, 0.1954),
+    ("mn_mentah",      0.1954, 0.2177),
+    ("cl_mentah",      0.2177, 0.2405),
+    ("ph_flok",        0.2405, 0.2661),
+    ("ph_tangki",      0.2661, 0.2884),
+    ("ntu_tangki",     0.2884, 0.3107),
+    ("warna_tangki",   0.3107, 0.3363),
+    ("ph_tapis",       0.3363, 0.3586),
+    ("ntu_tapis",      0.3586, 0.3803),
+    ("warna_tapis",    0.3803, 0.4059),
+    ("res_al_tapis",   0.4059, 0.4276),
+    ("ph_bersih",      0.6292, 0.6604),
+    ("ntu_bersih",     0.6604, 0.6916),
+    ("warna_bersih",   0.6916, 0.7228),
+    ("fe_bersih",      0.7228, 0.7540),
+    ("res_al_bersih",  0.7540, 0.7852),
+    ("mn_bersih",      0.7852, 0.8163),
+    ("res_f_bersih",   0.8163, 0.8475),
+    ("res_cl2",        0.8475, 0.8787),
+    ("cl_bersih",      0.8787, 0.9099),
+    ("kapur_post",     0.9099, 0.9265),
+    ("kapur_post_ppm", 0.9265, 0.9431),
+    ("koagulan_lit",   0.9431, 0.9597),
+    ("koagulan_ppm",   0.9597, 0.9763),
+    ("klorin_post",    0.9763, 0.9930),
 ]
 
 NUMERIC_COLS = {
@@ -377,24 +372,206 @@ NUMERIC_COLS = {
     "klorin_post", "paras_air",
 }
 
+# Row order: Shift1(8pg,12ptg), Shift2(4ptg,8mlm), Shift3(12mlm,4pg)
+# Fractions from actual detected row boundaries
+ROW_DEFS_STATIC = [
+    (0.367, 0.447, "8.00 Pagi",    "1"),
+    (0.447, 0.503, "12.00 Petang", "1"),
+    (0.553, 0.608, "4.00 Petang",  "2"),
+    (0.608, 0.663, "8.00 Malam",   "2"),
+    (0.713, 0.768, "12.00 Malam",  "3"),
+    (0.768, 0.824, "4.00 Pagi",    "3"),
+]
+
 # ─────────────────────────────────────────────────────────────
-# ROW STRUCTURE
-# The PAIP logbook has exactly 6 data rows per page:
-#   Shift 1: 8.00 Pagi, 12.00 Petang
-#   Shift 2: 4.00 Petang, 8.00 Malam
-#   Shift 3: 12.00 Malam, 4.00 Pagi
-# Row y-positions are calibrated as fractions of image height.
+# ADAPTIVE GRID DETECTION
+# Detects actual column and row boundaries from image lines.
+# Falls back to static fracs if detection gives unexpected results.
 # ─────────────────────────────────────────────────────────────
 
-# (y_start_frac, y_end_frac, masa_label, shift_label)
-ROW_DEFS = [
-    (0.368, 0.447, "8.00 Pagi",     "1"),
-    (0.447, 0.503, "12.00 Petang",  "1"),
-    (0.553, 0.607, "4.00 Petang",   "2"),
-    (0.607, 0.663, "8.00 Malam",    "2"),
-    (0.713, 0.768, "12.00 Malam",   "3"),
-    (0.768, 0.824, "4.00 Pagi",     "3"),
-]
+def _cluster_positions(positions, gap=8):
+    """Cluster nearby line positions into single values."""
+    if not len(positions):
+        return []
+    clusters = []
+    cluster = [positions[0]]
+    for p in positions[1:]:
+        if p - cluster[-1] <= gap:
+            cluster.append(p)
+        else:
+            clusters.append(int(np.mean(cluster)))
+            cluster = [p]
+    clusters.append(int(np.mean(cluster)))
+    return clusters
+
+def detect_grid(img: np.ndarray):
+    """
+    Detect horizontal row lines and vertical column lines from the image.
+    Returns (col_boundaries, row_boundaries) as lists of pixel positions,
+    or (None, None) if detection fails.
+    """
+    h, w = img.shape[:2]
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    enhanced = clahe.apply(gray)
+    thresh = cv2.adaptiveThreshold(
+        enhanced, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY_INV, 15, 10
+    )
+
+    # ── Horizontal lines (rows) ──────────────────────────────
+    h_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (w // 6, 1))
+    h_lines  = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, h_kernel, iterations=2)
+    row_sums = np.sum(h_lines, axis=1)
+    raw_ys   = np.where(row_sums > w * 0.20)[0]
+    row_lines = _cluster_positions(list(raw_ys))
+
+    # ── Vertical lines (cols) — use header region only ───────
+    h1 = int(h * 0.15); h2 = int(h * 0.30)
+    header     = img[h1:h2, :]
+    gray_hdr   = cv2.cvtColor(header, cv2.COLOR_BGR2GRAY)
+    enhanced_h = clahe.apply(gray_hdr)
+    thresh_h   = cv2.adaptiveThreshold(
+        enhanced_h, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY_INV, 11, 5
+    )
+    hh       = thresh_h.shape[0]
+    v_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, hh // 3))
+    v_lines  = cv2.morphologyEx(thresh_h, cv2.MORPH_OPEN, v_kernel, iterations=1)
+    col_sums = np.sum(v_lines, axis=0)
+    raw_xs   = np.where(col_sums > hh * 0.30)[0]
+    col_lines = _cluster_positions(list(raw_xs))
+
+    # ── Detect sub-column lines within each major section ────
+    def get_subcols(x_start, x_end, y_frac_start=0.28, y_frac_end=0.35):
+        region = img[int(h*y_frac_start):int(h*y_frac_end), x_start:x_end]
+        if region.size == 0:
+            return []
+        g = cv2.cvtColor(region, cv2.COLOR_BGR2GRAY)
+        e = clahe.apply(g)
+        t = cv2.adaptiveThreshold(e, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                  cv2.THRESH_BINARY_INV, 11, 5)
+        rh = t.shape[0]
+        vk = cv2.getStructuringElement(cv2.MORPH_RECT, (1, rh // 2))
+        vl = cv2.morphologyEx(t, cv2.MORPH_OPEN, vk)
+        cs = np.sum(vl, axis=0)
+        rxs = np.where(cs > rh * 0.3)[0]
+        return [x + x_start for x in _cluster_positions(list(rxs))]
+
+    print(f"Grid detection: {len(col_lines)} major col lines, {len(row_lines)} row lines")
+    return col_lines, row_lines, get_subcols
+
+def build_column_boundaries(img: np.ndarray, col_lines, get_subcols):
+    """
+    Build per-pixel column boundaries from detected grid lines.
+    Uses detected sub-column lines within each section;
+    falls back to equal subdivision if not enough lines found.
+    """
+    h, w = img.shape[:2]
+
+    # Expected major section x-boundaries (fracs)
+    # masa: 0-5.2%, air_mentah: 5.2-24%, tangki_flok: 24-26.6%,
+    # tangki_mendap+tapis: 26.6-42.8%, skip 42.8-62.9% (tangki besar header),
+    # air_bersih: 62.9-91.8%, right: 91.8-99.3%
+    def closest(lines, frac, tolerance=0.04):
+        target = frac * w
+        for l in lines:
+            if abs(l - target) < tolerance * w:
+                return l
+        return int(frac * w)  # fallback
+
+    # Section anchors
+    am_start  = closest(col_lines, 0.052)   # Air Mentah start
+    am_end    = closest(col_lines, 0.240)   # Air Mentah end / Tangki Flok start
+    tf_end    = closest(col_lines, 0.266)   # Tangki Flok end
+    tk_end    = closest(col_lines, 0.428)   # Tangki/Tapis end
+    ab_start  = closest(col_lines, 0.629)   # Air Bersih start
+    ab_end    = closest(col_lines, 0.918)   # Air Bersih end
+    right_end = closest(col_lines, 0.993)   # Page right edge
+
+    # Air Mentah sub-cols (8 cols: flow,ph,NTU,warna,Al,Fe,Mn,Cl)
+    am_subcols = get_subcols(am_start, am_end)
+    am_names   = ["flow","ph_mentah","ntu_mentah","warna_mentah",
+                  "al","fe_mentah","mn_mentah","cl_mentah"]
+    am_cols = _subdivide(am_subcols, am_start, am_end, len(am_names), am_names)
+
+    # Tangki Flok (1 col)
+    tf_cols = [("ph_flok", am_end, tf_end)]
+
+    # Tangki Mendap (3) + Selepas Tapis (4) = 7 cols
+    tk_subcols = get_subcols(tf_end, tk_end)
+    tk_names   = ["ph_tangki","ntu_tangki","warna_tangki",
+                  "ph_tapis","ntu_tapis","warna_tapis","res_al_tapis"]
+    tk_cols = _subdivide(tk_subcols, tf_end, tk_end, len(tk_names), tk_names)
+
+    # Air Bersih (9 cols)
+    ab_subcols = get_subcols(ab_start, ab_end)
+    ab_names   = ["ph_bersih","ntu_bersih","warna_bersih","fe_bersih",
+                  "res_al_bersih","mn_bersih","res_f_bersih","res_cl2","cl_bersih"]
+    ab_cols = _subdivide(ab_subcols, ab_start, ab_end, len(ab_names), ab_names)
+
+    # Right side best-effort (5 cols)
+    rt_names = ["kapur_post","kapur_post_ppm","koagulan_lit","koagulan_ppm","klorin_post"]
+    rt_cols  = _subdivide([], ab_end, right_end, len(rt_names), rt_names)
+
+    all_cols = am_cols + tf_cols + tk_cols + ab_cols + rt_cols
+    print(f"Built {len(all_cols)} column boundaries")
+    for name, x1, x2 in all_cols:
+        print(f"  {name}: {x1}-{x2} ({x1/w*100:.1f}%-{x2/w*100:.1f}%)")
+    return all_cols
+
+def _subdivide(detected_xs, x_start, x_end, n_cols, names):
+    """
+    Subdivide a section into n_cols using detected lines where available,
+    falling back to equal subdivision.
+    """
+    # Filter detected lines to within section
+    xs = sorted(set([x for x in detected_xs if x_start <= x <= x_end]))
+    # We need n_cols+1 boundaries (including start and end)
+    # If we have enough detected lines, use them
+    boundaries = [x_start] + xs + [x_end]
+    # Remove duplicates and sort
+    boundaries = sorted(set(boundaries))
+    # If we have more boundaries than needed, merge closest pairs
+    while len(boundaries) > n_cols + 1:
+        diffs = [boundaries[i+1]-boundaries[i] for i in range(len(boundaries)-1)]
+        idx = diffs.index(min(diffs))
+        merged = (boundaries[idx] + boundaries[idx+1]) // 2
+        boundaries = boundaries[:idx] + [merged] + boundaries[idx+2:]
+    # If not enough, subdivide equally
+    if len(boundaries) < n_cols + 1:
+        step = (x_end - x_start) / n_cols
+        boundaries = [x_start + int(i * step) for i in range(n_cols)] + [x_end]
+    result = []
+    for i, name in enumerate(names):
+        if i < len(boundaries) - 1:
+            result.append((name, boundaries[i], boundaries[i+1]))
+    return result
+
+def build_row_boundaries(img: np.ndarray, row_lines):
+    """
+    Build the 6 data row y-boundaries from detected horizontal lines.
+    Returns list of (y1, y2, masa_label, shift_label).
+    """
+    h, w = img.shape[:2]
+    # Expected data row fractions
+    expected = ROW_DEFS_STATIC
+    result = []
+    for y_s, y_e, masa, shift in expected:
+        # Find closest detected line to expected y_start and y_end
+        def closest_y(frac):
+            target = frac * h
+            candidates = [l for l in row_lines if abs(l - target) < 0.06 * h]
+            if candidates:
+                return min(candidates, key=lambda l: abs(l - target))
+            return int(frac * h)
+        y1 = closest_y(y_s)
+        y2 = closest_y(y_e)
+        if y2 - y1 < 15:  # too thin, use static
+            y1 = int(y_s * h)
+            y2 = int(y_e * h)
+        result.append((y1, y2, masa, shift))
+    return result
 
 # ─────────────────────────────────────────────────────────────
 # CELL OCR
@@ -402,27 +579,22 @@ ROW_DEFS = [
 
 def preprocess_cell(cell: np.ndarray, is_numeric: bool) -> np.ndarray:
     """Upscale + denoise + binarize a cell crop for better OCR."""
-    # Upscale
     cell = cv2.resize(cell, None, fx=3, fy=3, interpolation=cv2.INTER_CUBIC)
-    # Convert to grayscale
     if len(cell.shape) == 3:
         gray = cv2.cvtColor(cell, cv2.COLOR_BGR2GRAY)
     else:
         gray = cell
-    # CLAHE contrast enhancement
     clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(4, 4))
     gray  = clahe.apply(gray)
-    # Denoise
-    gray = cv2.medianBlur(gray, 3)
-    # Binarize
+    gray  = cv2.medianBlur(gray, 3)
     _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     return binary
 
 def ocr_cell(img: np.ndarray, x1: int, y1: int, x2: int, y2: int,
              col_name: str = "") -> str:
-    pad  = 4
-    y1p  = max(0, y1 - pad);  y2p = min(img.shape[0], y2 + pad)
-    x1p  = max(0, x1 - pad);  x2p = min(img.shape[1], x2 + pad)
+    pad = 3
+    y1p = max(0, y1 - pad);  y2p = min(img.shape[0], y2 + pad)
+    x1p = max(0, x1 - pad);  x2p = min(img.shape[1], x2 + pad)
     cell = img[y1p:y2p, x1p:x2p]
     if cell is None or cell.size == 0:
         return ""
@@ -442,31 +614,35 @@ def ocr_cell(img: np.ndarray, x1: int, y1: int, x2: int, y2: int,
 
 def extract_table(img: np.ndarray) -> list:
     """
-    Extract exactly 6 data rows using calibrated y-positions and column fractions.
-    Falls back gracefully if image dimensions differ from calibration.
+    Adaptive extraction: detect grid lines first, fall back to static fracs.
+    Works on any image size/scan angle as long as the PAIP form is recognizable.
     """
     h, w = img.shape[:2]
     print(f"Image dimensions: {w}x{h}")
 
-    # Build pixel column boundaries from fractions
-    col_boundaries = [
-        (name, int(s * w), int(e * w))
-        for name, s, e in COLUMN_FRACS
-    ]
+    # Try adaptive grid detection
+    try:
+        col_lines, row_lines, get_subcols = detect_grid(img)
+        col_boundaries = build_column_boundaries(img, col_lines, get_subcols)
+        row_boundaries = build_row_boundaries(img, row_lines)
+        print("Using ADAPTIVE grid detection")
+    except Exception as e:
+        print(f"Adaptive detection failed ({e}), using static fracs")
+        col_boundaries = [(n, int(s*w), int(e*w)) for n,s,e in COLUMN_FRACS_STATIC]
+        row_boundaries = [(int(s*h), int(e*h), m, sh)
+                          for s,e,m,sh in ROW_DEFS_STATIC]
 
     rows = []
-    for row_idx, (y_s, y_e, masa_label, shift_label) in enumerate(ROW_DEFS):
-        y1 = int(y_s * h)
-        y2 = int(y_e * h)
+    for row_idx, (y1, y2, masa_label, shift_label) in enumerate(row_boundaries):
         row_data = {"masa": masa_label, "shift": shift_label}
         for col_name, x1, x2 in col_boundaries:
             val = ocr_cell(img, x1, y1, x2, y2, col_name)
             row_data[col_name] = val
 
         non_empty = sum(1 for k, v in row_data.items()
-                        if k not in ("masa", "shift")
-                        and str(v).strip() not in ("", "-", "--"))
-        print(f"Row {row_idx} ({masa_label}): {non_empty} non-empty cells, "
+                        if k not in ("masa","shift")
+                        and str(v).strip() not in ("","–","--"))
+        print(f"Row {row_idx} ({masa_label}): {non_empty} cells | "
               f"flow='{row_data.get('flow','')}' "
               f"ph='{row_data.get('ph_mentah','')}' "
               f"ntu='{row_data.get('ntu_mentah','')}'")
@@ -895,3 +1071,4 @@ def get_stats(request: Request, user=Depends(get_current_user)):
 if __name__ == "__main__":
     uvicorn.run("main_v6:app", host="0.0.0.0",
                 port=int(os.environ.get("PORT", 8000)), reload=False)
+
